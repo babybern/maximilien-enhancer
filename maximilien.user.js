@@ -60,6 +60,13 @@ function removeElement(element) {
     return element.parentNode.removeChild(element);
 }
 
+function cloneAndReplace(element) {
+    var oldElement = element
+    var newElement = oldElement.cloneNode(true);
+    oldElement.insertAdjacentElement('afterend', newElement);
+    removeElement(oldElement);
+}
+
 function xhrFetch(obj){
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
@@ -122,13 +129,12 @@ function copyonclick(element) {
             break;
         case 'EnvoiCourrierElectroniqueSimple':
             // On clone la liste des type de messages(car on peut pas supprimer l'évenement ! Allo ?!)
-            var oldInput = document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType')
-            var newInput = oldInput.cloneNode(true);
-            newInput.id = "choixTypeMessage";
-            oldInput.insertAdjacentElement('afterend', newInput);
-            removeElement(oldInput);
+            cloneAndReplace(document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType'));
+
 
             // Refonte du choix des destinataires (bref, on reste dans la même page !)
+            // Et du coup idem pour le bouton
+            cloneAndReplace(document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_buttonEditdestinataire'));
             var urlEncodedData = "";
             var urlEncodedDataPairs = [];
             var name;
