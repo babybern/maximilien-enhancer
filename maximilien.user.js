@@ -1,4 +1,4 @@
-﻿// ==UserScript==
+// ==UserScript==
 // @name         Maximilien enhancer
 // @namespace    https://github.com/babybern/maximilien-enhancer
 // @version      0.1
@@ -6,8 +6,10 @@
 // @author       babybern
 // @match        https://marches.maximilien.fr/*?page=*
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
+// @downloadURL  https://github.com/babybern/maximilien-enhancer/raw/master/maximilien.user.js
 // @grant        GM_setClipboard
 // @grant        GM_notification
+// @grant        GM_addStyle
 // ==/UserScript==
 var signature = `
 Cordialement,
@@ -23,49 +25,62 @@ A cet effet, je vous remercie de bien vouloir prendre connaissance du courrier j
 var notification = `
 Votre entreprise a été déclarée attributaire de la consultation citée en référence.
 Veuillez-trouver à titre de notification le marché signé par le Représentant du Pouvoir Adjudicateur.
-L'Accusé de réception de ce message vaut notification officielle du marché.`
+L'Accusé de réception de ce message vaut notification officielle du marché.`;
 var rejet = `
 Nous vous remercions d'avoir répondu à la consultation citée en référence.
-Nous sommes toutefois au regret de vous annoncer que votre réponse n'a pas été retenue par le Représentant du Pouvoir Adjudicateur.`
+Nous sommes toutefois au regret de vous annoncer que votre réponse n'a pas été retenue par le Représentant du Pouvoir Adjudicateur.`;
 var modif_consultation = `
 Nous vous remercions d'avoir répondu à la consultation citée en référence.
-Nous sommes toutefois au regret de vous annoncer que votre réponse n'a pas été retenue par le Représentant du Pouvoir Adjudicateur.`
+Nous sommes toutefois au regret de vous annoncer que votre réponse n'a pas été retenue par le Représentant du Pouvoir Adjudicateur.`;
 var demande_complement = `
 Nous vous remercions d'avoir répondu à la consultation citée en référence.
 Après analyse, il vous est demandé d'apporter les précisions suivantes : [à préciser au cas par cas].
 La réponse à ces questions peut se faire via l'application, à partir de la page d'accès à cette demande de complément.
-Il est nécessaire de disposer d'un Compte entreprise sur l'application pour accéder à cette réponse.`
-var annulation_consultation = `La consultation citée en référence a été annulée.`
+Il est nécessaire de disposer d'un Compte entreprise sur l'application pour accéder à cette réponse.`;
+var annulation_consultation = `La consultation citée en référence a été annulée.`;
 
-
-(function() {
-    'use strict';
-
-    // copyonclick(element) ==> permet de copier dans le presse papier un élément
-    function copyonclick(element) {
-        element.addEventListener('click',function(e){GM_setClipboard(e.target.innerText);})
-    }
-    var off = function (event, elem, callback, capture) {
-	if (typeof (elem) === 'function') {
-		capture = callback;
-		callback = elem;
-		elem = window;
-	}
-	capture = capture ? true : false;
-	elem = typeof elem === 'string' ? document.querySelector(elem) : elem;
-	if (!elem) return;
-	elem.removeEventListener(event, callback, capture);
-    };
-
-    //STYLES CSS
-    var cssheet = document.createElement('style');
-    cssheet.innerHTML = `
+//CSS
+GM_addStyle(`
 .blockListEmail {width: auto; margin-left:205px; display: block}
 .adresseEmail {border: 1px solid black; position: relative; display: inline-table; margin: 2px 2px 2px 2px; padding: 0 2px 0 2px; border-radius: 25px}
 .adresseEmail:before {}
-a.bouton-retour {border: 1px; border-radius: 25px; color: violet}
-`;
-    document.body.appendChild(cssheet);
+a.bouton-retour {border: 1px solid violet; border-radius: 25px; color: violet}
+`);
+
+//Outils
+function insertAfter(newNode, referenceNode) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+}
+
+function insertBefore(newNode, referenceNode) {
+    referenceNode.parentNode.insertBefore(newNode, referenceNode);
+}
+
+function removeElement(element) {
+    return element.parentNode.removeChild(element);
+}
+
+function xhrFetch(obj){
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            console.log(this.responseText);
+        }
+    };
+    //index.php?page=agent.EnvoiCourrierElectroniqueChoixDestinataire&IdRef=340272&forInvitationConcourir=&IdEchange=254478
+    xhr.open('POST', 'index.php?page=agent.EnvoiCourrierElectroniqueChoixDestinataire&IdRef=340272&forInvitationConcourir=&IdEchange=254478', true);
+    xhr.send("fname=Henry&lname=Ford");
+}
+
+// copyonclick(element) ==> permet de copier dans le presse papier un élément
+function copyonclick(element) {
+    element.addEventListener('click',function(e){GM_setClipboard(e.target.innerText);})
+}
+
+// variables utiles
+//...
+(function() {
+    'use strict';
 
     //Récupération de l'intitulé de la page
     var page = document.URL.split('=')[1].split('&')[0].split('.')[1]
@@ -111,9 +126,14 @@ a.bouton-retour {border: 1px; border-radius: 25px; color: violet}
             var newInput = oldInput.cloneNode(true);
             newInput.id = "choixTypeMessage";
             oldInput.insertAdjacentElement('afterend', newInput);
-            oldInput.parentNode.removeChild(oldInput);
-            //document.getElementBy
-            //document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_textMail').innerHTML = attribution;
+            removeElement(oldInput);
+
+            // Refonte du choix des destinataires (bref, on reste dans la même page !)
+            var urlEncodedData = "";
+            var urlEncodedDataPairs = [];
+            var name;
+
+            var formData = new FormData(document.getElementById('ctl0_ctl2'));
             break;
         case 'ChangingConsultation':
             break;
