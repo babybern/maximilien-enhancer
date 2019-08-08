@@ -1,9 +1,9 @@
 ﻿// ==UserScript==
-// @name         Maximilien
+// @name         Maximilien enhancer
 // @namespace    https://github.com/babybern/maximilien-enhancer
 // @version      0.1
 // @description  try to take over the world!
-// @author       You
+// @author       babybern
 // @match        https://marches.maximilien.fr/*?page=*
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
 // @grant        GM_setClipboard
