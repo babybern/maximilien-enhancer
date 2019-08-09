@@ -48,6 +48,21 @@ a.bouton-retour {border: 1px solid violet; border-radius: 25px; color: violet}
 `);
 
 //Outils
+//Mise des paramètres GET dans un tableau getUrlVars
+
+/**
+ * Returns an Array of all url parameters
+ * @return {[Array]} [Key Value pairs form URL]
+ */
+
+function getUrlVars() {
+    var vars = {};
+    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+        vars[key] = value;
+    });
+    return vars;
+};
+
 function insertAfter(newNode, referenceNode) {
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 }
@@ -89,11 +104,8 @@ function copyonclick(element) {
 (function() {
     'use strict';
 
-    //Récupération de l'intitulé de la page
-    var page = document.URL.split('=')[1].split('&')[0].split('.')[1]
-
-    switch(page) {
-        case 'EnvoiCourrierElectroniqueChoixDestinataire':
+    switch(getUrlVars().page) {
+        case 'agent.EnvoiCourrierElectroniqueChoixDestinataire':
             //La base : on coche la case 'adresses libres'
             document.getElementById('ctl0_CONTENU_PAGE_checkAdressesLibres').checked = true
 
@@ -120,20 +132,20 @@ function copyonclick(element) {
 
             });
             break;
-        case 'DetailConsultation':
+        case 'agent.DetailConsultation':
             // Petit ajout : un click sur l'adresse URL de la consultation la copie dans le presse-papier
             document.getElementsByClassName('code')[0].innerText = document.getElementsByClassName('code')[0].innerText+' - '+document.getElementsByClassName('code')[0].nextSibling.innerText
             document.getElementsByClassName('code')[0].removeAttribute('onmouseover')
-            document.getElementById('ctl0_CONTENU_PAGE_consultationAdditionalInformations_urlDirecteConsultation').addEventListener('click',function(e){GM_setClipboard(e.target.innerText);GM_notification('URL copiée','Maximilien','https://marches.maximilien.fr/themes/images/logo.gif')})
-            document.getElementById('ctl0_CONTENU_PAGE_IdConsultationSummary_objet').addEventListener('click',function(e){GM_setClipboard(e.target.innerText);GM_notification('URL copiée','Maximilien','https://marches.maximilien.fr/themes/images/logo.gif')})
+            document.getElementById('ctl0_CONTENU_PAGE_consultationAdditionalInformations_urlDirecteConsultation').addEventListener('click',function(e){GM_setClipboard(e.target.innerText);})
+            document.getElementById('ctl0_CONTENU_PAGE_IdConsultationSummary_objet').addEventListener('click',function(e){GM_setClipboard(e.target.innerText);})
             break;
-        case 'EnvoiCourrierElectroniqueSimple':
+        case 'agent.EnvoiCourrierElectroniqueSimple':
             // On clone la liste des type de messages(car on peut pas supprimer l'évenement ! Allo ?!)
             cloneAndReplace(document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType'));
 
 
             // Refonte du choix des destinataires (bref, on reste dans la même page !)
-            // Et du coup idem pour le bouton
+            // Et du coup idem pour le bouton, on le clone
             cloneAndReplace(document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_buttonEditdestinataire'));
             var urlEncodedData = "";
             var urlEncodedDataPairs = [];
@@ -141,14 +153,14 @@ function copyonclick(element) {
 
             var formData = new FormData(document.getElementById('ctl0_ctl2'));
             break;
-        case 'ChangingConsultation':
+        case 'agent.ChangingConsultation':
             break;
-        case 'TableauDeBord':
+        case 'agent.TableauDeBord':
 
             break;
-        case 'ouvertureEtAnalyse':
+        case 'agent.ouvertureEtAnalyse':
             break;
-        case 'GestionRegistres':
+        case 'agent.GestionRegistres':
             // Clic sur la question ==> copie dans le presse-papier
             document.querySelectorAll('[headers=retrait_el_Fichiers]').forEach(function(element) {
                 copyonclick(element);
