@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Maximilien enhancer
 // @namespace    https://github.com/babybern/maximilien-enhancer
-// @version      0.1
-// @description  try to take over the world!
+// @version      0.2
+// @description  Amélioration fonctionnelle de l'interface acheteur de Maximilien.
 // @author       babybern
 // @match        https://marches.maximilien.fr/*?page=*
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js
@@ -11,33 +11,48 @@
 // @grant        GM_notification
 // @grant        GM_addStyle
 // ==/UserScript==
+
+/*
+Configuration des messages types. Dans le tableau 'messages', laisser la première valeur à false.
+Pour le multiligne, ne pas oublier les accent " ` " délimiteur et peut être les retour à la ligne ("\n").
+Le message qui a la valeur 'default' à true sera complété par défaut.
+*/
+var messageIntro = `Bonjour,\n`
 var signature = `
 Cordialement,
 
 Prénom NOM
 Tél :
 `
-
-var attribution = `
-Bonjour\n
+var messages = [false]
+//ATTRIBUTION
+messages.push({'typeMessage': 'Courrier d\'attribution', 'objet': '[ATTRIBUTION] {objet}','message': `
 J'ai le plaisir de vous informer que votre proposition relative au marché mentionné en objet a été retenue.\n
-A cet effet, je vous remercie de bien vouloir prendre connaissance du courrier joint à cet envoi.\n`;
-var notification = `
+A cet effet, je vous remercie de bien vouloir prendre connaissance du courrier joint à cet envoi.\n`});
+// NOTIFICATION
+messages.push({'typeMessage': 'Courrier de notification', 'objet': '[NOTIFICATION] {objet}', 'message': `
 Votre entreprise a été déclarée attributaire de la consultation citée en référence.
 Veuillez-trouver à titre de notification le marché signé par le Représentant du Pouvoir Adjudicateur.
-L'Accusé de réception de ce message vaut notification officielle du marché.`;
-var rejet = `
+L'Accusé de réception de ce message vaut notification officielle du marché.`});
+// REJET
+messages.push({'typeMessage': 'Courrier de rejet', 'objet': '[REJET] {objet}', 'message': `
 Nous vous remercions d'avoir répondu à la consultation citée en référence.
-Nous sommes toutefois au regret de vous annoncer que votre réponse n'a pas été retenue par le Représentant du Pouvoir Adjudicateur.`;
-var modif_consultation = `
+Nous sommes toutefois au regret de vous annoncer que votre réponse n'a pas été retenue par le Représentant du Pouvoir Adjudicateur.`});
+// Modification consultation
+messages.push({'typeMessage': 'Modification de la consultation', 'objet': '[MODIFICATION] {objet}', 'message': `
+La consultation a été modifiée.`});
+// Messsage libre
+messages.push({'typeMessage': 'Message libre', 'objet': '{objet}', 'default': true, 'message': `
 Nous vous remercions d'avoir répondu à la consultation citée en référence.
-Nous sommes toutefois au regret de vous annoncer que votre réponse n'a pas été retenue par le Représentant du Pouvoir Adjudicateur.`;
-var demande_complement = `
+MESSAGE LIBRE.`});
+// DEMANDE DE COMPLEMENT
+messages.push({'typeMessage': 'Demande de compléments', 'objet': '[DEMANDE DE COMPLEMENTS] {objet}', 'message': `
 Nous vous remercions d'avoir répondu à la consultation citée en référence.
 Après analyse, il vous est demandé d'apporter les précisions suivantes : [à préciser au cas par cas].
 La réponse à ces questions peut se faire via l'application, à partir de la page d'accès à cette demande de complément.
-Il est nécessaire de disposer d'un Compte entreprise sur l'application pour accéder à cette réponse.`;
-var annulation_consultation = `La consultation citée en référence a été annulée.`;
+Il est nécessaire de disposer d'un Compte entreprise sur l'application pour accéder à cette réponse.`});
+// ANNULATION
+messages.push({'typeMessage': 'Annulation de la consultation', 'objet': '[ANNULATION] {objet}', 'message': `La consultation citée en référence a été annulée.`});
 
 //CSS
 GM_addStyle(`
@@ -100,7 +115,7 @@ function copyonclick(element) {
 }
 
 // variables utiles
-//...
+// ...
 (function() {
     'use strict';
 
@@ -133,25 +148,67 @@ function copyonclick(element) {
             });
             break;
         case 'agent.DetailConsultation':
-            // Petit ajout : un click sur l'adresse URL de la consultation la copie dans le presse-papier
-            document.getElementsByClassName('code')[0].innerText = document.getElementsByClassName('code')[0].innerText+' - '+document.getElementsByClassName('code')[0].nextSibling.innerText
-            document.getElementsByClassName('code')[0].removeAttribute('onmouseover')
-            document.getElementById('ctl0_CONTENU_PAGE_consultationAdditionalInformations_urlDirecteConsultation').addEventListener('click',function(e){GM_setClipboard(e.target.innerText);})
-            document.getElementById('ctl0_CONTENU_PAGE_IdConsultationSummary_objet').addEventListener('click',function(e){GM_setClipboard(e.target.innerText);})
+            // Petit ajout : le code CPV est affiché AVEC son intitulé à côté, plus besoin de laisser la souris dessus
+            document.getElementsByClassName('code')[0].innerText = document.getElementsByClassName('code')[0].innerText+' - '+document.getElementsByClassName('code')[0].nextSibling.innerText;
+            document.getElementsByClassName('code')[0].removeAttribute('onmouseover');
+            // Petit ajout : un click sur l'adresse URL de la consultation ou l'objet les copie dans le presse-papier
+            copyonclick(document.getElementById('ctl0_CONTENU_PAGE_consultationAdditionalInformations_urlDirecteConsultation'));
+            copyonclick(document.getElementById('ctl0_CONTENU_PAGE_IdConsultationSummary_objet'));
             break;
         case 'agent.EnvoiCourrierElectroniqueSimple':
+            // Variables
+            var messageTextarea = document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_textMail');
+            var objetInput = document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_objet');
+            var selectMessageType = '';
+            var objetConsultation = document.getElementById('ctl0_CONTENU_PAGE_IdConsultationSummary_objet').innerText;
+
             // On clone la liste des type de messages(car on peut pas supprimer l'évenement ! Allo ?!)
+            // Et on ajoute des messages perso
             cloneAndReplace(document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType'));
+            document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').value
 
 
             // Refonte du choix des destinataires (bref, on reste dans la même page !)
             // Et du coup idem pour le bouton, on le clone
             cloneAndReplace(document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_buttonEditdestinataire'));
+            document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').innerHTML = '';
             var urlEncodedData = "";
             var urlEncodedDataPairs = [];
             var name;
 
             var formData = new FormData(document.getElementById('ctl0_ctl2'));
+            var i = 0;
+
+            // Refonte du menu select en fonction des messages défini au début du script
+            messages.forEach(function(element){
+                if(element.default){
+                    var objet = element.objet;
+                    objet = objet.replace('{objet}', objetConsultation);
+                    objetInput.value = objet;
+                    messageTextarea.value = messageIntro+element.message+signature;
+                }
+                console.log(element.typeMessage);
+                var optionElement = document.createElement('option');
+                optionElement.value = i;
+                if(!element){
+                    optionElement.innerText = 'Choisir un type de message';
+                }
+                else{
+                    optionElement.innerText = element.typeMessage;
+                }
+                document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').appendChild(optionElement);
+                i = i+1;
+            });
+            var changeType;
+            document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').addEventListener('change', changeType = function(event){
+                console.log(document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').value);
+                if(messages[document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').value]) {
+                    var objet = messages[document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').value].objet;
+                    objet = objet.replace('{objet}', objetConsultation);
+                    messageTextarea.value = messageIntro+messages[document.getElementById('ctl0_CONTENU_PAGE_TemplateEnvoiCourrierElectronique_messageType').value].message+signature;
+                    objetInput.value = objet;
+                }
+            });
             break;
         case 'agent.ChangingConsultation':
             break;
