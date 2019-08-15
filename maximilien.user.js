@@ -213,7 +213,20 @@ function copyonclick(element) {
         case 'agent.ChangingConsultation':
             break;
         case 'agent.TableauDeBord':
+            var actionColumns = [];
+            var ie = 2;
+            document.querySelectorAll("td[headers='allCons_actions']").forEach(function(element){
+                if((ie % 2) === 0) {
 
+                    actionColumns.push(element);
+                    var divBouton = document.createElement('div');
+                    var divLien = document.createElement('a');
+                    divLien.innerHTML = '+';
+                    divBouton.appendChild(divLien);
+                    console.log(element.firstChild );
+                }
+                i = ie + 1;
+            });
             break;
         case 'agent.ouvertureEtAnalyse':
             break;
